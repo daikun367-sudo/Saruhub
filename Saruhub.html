@@ -1,0 +1,671 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Saruhub</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<style id="css">
+/* Layout: 上にアップロード口（持ち主だけに表示）、その下にサル画像が段組みでびっしり並ぶ */
+/* 黒一色に決めたテーマ。明るい版は作らず、どの画面でも同じ見た目にする */
+:root {
+  --bg: #0B0A08;          /* 黒 */
+  --ink: #FDFBF3;         /* 白 */
+  --muted: #ABA594;
+  --zone: #17150F;        /* アップロード口の地 */
+  --hot: #FFD21F;         /* バナナの黄色 */
+  --danger: #FF5A47;      /* 消すときの赤 */
+  --paper: #FDFBF3;       /* 画像の台紙 */
+  --shadow: rgba(0, 0, 0, .6);
+  --scrim: rgba(0, 0, 0, .92);
+  --scrim-ink: #FDFBF3;
+  --btn-bg: #FFD21F;
+  --btn-fg: #0B0A08;
+  --font-display: "Dela Gothic One", "Hiragino Kaku Gothic StdN", "Yu Gothic", "Meiryo", sans-serif;
+  --font-body: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.page {
+  max-width: 1240px;
+  margin-inline: auto;
+  padding-inline: 16px;
+  padding-block: 20px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ヘッダー */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+.logo svg { width: 46px; height: 42px; flex: none; }
+.count { font-weight: 700; font-variant-numeric: tabular-nums; }
+.count b {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.6rem;
+  color: var(--hot);
+  padding-inline: 4px;
+}
+
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.9rem, 6.2vw, 4rem);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+h1 span { color: var(--hot); }
+
+/* ボタン */
+.btn {
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 11px 20px;
+  border-radius: 999px;
+  border: 2px solid var(--btn-bg);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.btn:hover { background: color-mix(in srgb, var(--btn-bg) 14%, transparent); }
+.btn.main { background: var(--btn-bg); color: var(--btn-fg); font-size: 1.0625rem; padding: 13px 26px; }
+.btn.main:hover { background: color-mix(in srgb, var(--btn-bg) 84%, var(--ink)); }
+.btn.armed { border-color: var(--danger); color: var(--danger); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: progress; }
+:focus-visible { outline: 3px solid var(--hot); outline-offset: 3px; }
+
+/* アップロード口 */
+.zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 28px 20px;
+  border: 3px dashed var(--muted);
+  border-radius: 18px;
+  background: var(--zone);
+  text-align: center;
+}
+.zone[data-empty="true"] { min-height: min(52vh, 440px); }
+.zone[data-empty="false"] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px 18px;
+  padding: 14px 18px;
+  text-align: left;
+}
+.face { width: 96px; height: 88px; }
+.zone[data-empty="false"] .face,
+.zone[data-empty="false"] .zone-title { display: none; }
+.zone-title, .empty-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 3.4vw, 1.9rem);
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.zone-hint { margin: 0; color: var(--muted); font-weight: 700; min-width: 0; }
+body.dragging .zone { border-color: var(--hot); border-style: solid; }
+body.busy .zone { opacity: .6; }
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+/* 前の版でこのブラウザに保存した画像 */
+.local {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 14px 18px;
+  border: 2px solid var(--hot);
+  border-radius: 14px;
+  font-weight: 700;
+}
+.local span { min-width: 0; flex: 1 1 16em; }
+
+/* お知らせ */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 46px;
+}
+.toast { margin: 0; font-weight: 700; color: var(--muted); min-width: 0; }
+
+/* 画像の壁 */
+.grid { columns: 4 230px; column-gap: 14px; }
+.tile {
+  position: relative;
+  break-inside: avoid;
+  margin: 0 0 14px;
+  padding: 6px;
+  background: var(--paper);
+  border-radius: 6px;
+  box-shadow: 0 3px 0 var(--shadow), 0 8px 18px var(--shadow);
+}
+.tile:nth-child(3n) { transform: rotate(-.7deg); }
+.tile:nth-child(4n+1) { transform: rotate(.6deg); }
+.open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.open img { display: block; width: 100%; height: auto; border-radius: 3px; }
+.del {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 17px;
+  border: 2px solid var(--paper);
+  background: var(--bg);
+  color: var(--ink);
+  font: 700 1rem/1 var(--font-body);
+  cursor: pointer;
+  opacity: .88;
+}
+.del:hover, .del.armed { background: var(--danger); color: var(--bg); opacity: 1; }
+
+.note { margin: 0; font-size: .875rem; color: var(--muted); max-width: 48em; }
+
+/* 大きく見る */
+dialog.viewer {
+  border: 0;
+  padding: 16px;
+  background: transparent;
+  color: var(--scrim-ink);
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: visible;
+}
+dialog.viewer::backdrop { background: var(--scrim); }
+.viewer-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.viewer img { max-width: min(92vw, 1400px); max-height: 74vh; width: auto; height: auto; border-radius: 6px; border: 6px solid var(--paper); background: var(--paper); }
+.viewer-name { margin: 0; font-weight: 700; max-width: 90vw; overflow-wrap: anywhere; text-align: center; }
+.viewer-ctl { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.viewer .btn { border-color: var(--scrim-ink); color: var(--scrim-ink); }
+.viewer .btn:hover { background: color-mix(in srgb, var(--scrim-ink) 18%, transparent); }
+
+@media (max-width: 640px) {
+  .grid { columns: 2; column-gap: 10px; }
+  .tile { margin-bottom: 10px; padding: 4px; }
+  .del { top: 8px; right: 8px; min-width: 30px; height: 30px; }
+}
+</style>
+<div id="app">
+<div class="page">
+  <header class="top">
+    <div class="logo">
+      <svg viewBox="4 8 92 84" aria-hidden="true">
+        <g id="saru">
+          <circle cx="19" cy="46" r="12" fill="#B5A38D"/><circle cx="19" cy="46" r="6.5" fill="#EC7B68"/>
+          <circle cx="81" cy="46" r="12" fill="#B5A38D"/><circle cx="81" cy="46" r="6.5" fill="#EC7B68"/>
+          <circle cx="50" cy="50" r="31" fill="#B5A38D"/>
+          <circle cx="40" cy="45" r="12.5" fill="#EC7B68"/><circle cx="60" cy="45" r="12.5" fill="#EC7B68"/>
+          <ellipse cx="50" cy="63" rx="19" ry="14.5" fill="#EC7B68"/>
+          <path d="M35.5 47q4.5-6 9 0M55.5 47q4.5-6 9 0M42 64.5q8 8 16 0" fill="none" stroke="#2A1A14" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="47.5" cy="57" r="1.1" fill="#2A1A14" opacity=".7"/><circle cx="52.5" cy="57" r="1.1" fill="#2A1A14" opacity=".7"/>
+        </g>
+      </svg>
+      <span>Saruhub</span>
+    </div>
+    <div class="count" aria-live="polite">サル画像<b id="count">0</b>枚</div>
+  </header>
+
+  <h1>サルの画像を<span>貼りまくれ。</span></h1>
+
+  <section class="zone" id="zone" data-empty="true" aria-label="画像のアップロード" hidden>
+    <svg class="face" viewBox="4 8 92 84" aria-hidden="true"><use href="#saru"/></svg>
+    <p class="zone-title">手持ちのサル画像を、ここにアップロード</p>
+    <button class="btn main" id="btnPick" type="button">画像をアップロード</button>
+    <p class="zone-hint">何枚でもまとめて選べます。ここへドラッグしても、コピーした画像を貼り付け（Ctrl+V）してもアップロードできます。</p>
+    <input id="file" type="file" accept="image/*" multiple hidden>
+  </section>
+
+  <div class="empty" id="empty" hidden>
+    <svg class="face" viewBox="4 8 92 84" aria-hidden="true"><use href="#saru"/></svg>
+    <p class="empty-title">まだサルの画像がありません。</p>
+  </div>
+
+  <div class="local" id="localBar" hidden>
+    <span id="localText"></span>
+    <button class="btn" id="btnLocal" type="button">この画像も公開する</button>
+  </div>
+
+  <div class="bar">
+    <p class="toast" id="toast" role="status"></p>
+    <button class="btn" id="btnClear" type="button" hidden>全部消す</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="note" id="note" hidden></p>
+</div>
+
+<dialog class="viewer" id="viewer" aria-label="画像を大きく表示">
+  <div class="viewer-inner">
+    <img id="viewerImg" alt="">
+    <p class="viewer-name" id="viewerName"></p>
+    <div class="viewer-ctl">
+      <button class="btn" id="btnPrev" type="button">前へ</button>
+      <button class="btn" id="btnNext" type="button">次へ</button>
+      <button class="btn" id="btnClose" type="button">閉じる</button>
+    </div>
+  </div>
+</dialog>
+</div>
+<script type="application/json" id="state">{"v":1,"items":[{"id":"mv0lm9vlw8xjik","name":"S__7069723.jpg","w":1100,"h":391,"src":"data:image/webp;base64,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"}]}</script>
+<script id="main">
+(function () {
+  'use strict';
+
+  // ---- このページ自身の「もと」。公開するときはここから作り直す ------------
+  // 画面を書きかえる前の状態を最初に取っておく
+  var SHELL = document.getElementById('app').innerHTML;
+  var CSS = document.getElementById('css').textContent;
+  var JS = document.getElementById('main').textContent;
+  var HEAD = '<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>';
+  var FONT = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700&display=swap">';
+
+  function buildDoc(list) {
+    var json = JSON.stringify({ v: 1, items: list }).replace(/</g, '\\u003c');
+    return HEAD + '\n<title>Saruhub</title>\n' + FONT + '\n<style id="css">' + CSS + '</style>\n' +
+      '<div id="app">' + SHELL + '</div>\n' +
+      '<script type="application/json" id="state">' + json + '<\/script>\n' +
+      '<script id="main">' + JS + '<\/script>\n</body></html>';
+  }
+  function byteLen(s) { return new Blob([s]).size; }
+
+  var LIMIT = 15 * 1024 * 1024;     // ページ全体の上限（16MB）より少し手前
+  var MAX_EDGE = 1100;              // 長い辺をここまで縮める
+  var GIF_KEEP = 1200 * 1024;       // これより小さいGIFは動くまま残す
+
+  // ---- 状態 ------------------------------------------------------------
+  var items = [];                   // 新しい順: {id, name, w, h, src}
+  try {
+    var parsed = JSON.parse(document.getElementById('state').textContent);
+    if (parsed && Array.isArray(parsed.items)) {
+      items = parsed.items.filter(function (it) { return it && typeof it.src === 'string' && it.src.indexOf('data:image/') === 0; });
+    }
+  } catch (e) {}
+
+  var artifact = null;
+  var editor = false;
+  var busy = false;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var grid = $('grid'), zone = $('zone'), emptyEl = $('empty'), countEl = $('count');
+  var toastEl = $('toast'), btnClear = $('btnClear'), noteEl = $('note'), fileInput = $('file');
+  var localBar = $('localBar'), localText = $('localText'), btnLocal = $('btnLocal');
+
+  function toast(msg) { toastEl.textContent = msg; }
+  function setBusy(on, msg) {
+    busy = on;
+    document.body.classList.toggle('busy', on);
+    ['btnPick', 'btnClear', 'btnLocal'].forEach(function (id) { $(id).disabled = on; });
+    if (msg) toast(msg);
+  }
+  function flash(msg) { try { sessionStorage.setItem('saruhub-flash', msg); } catch (e) {} }
+  function takeFlash() {
+    try {
+      var m = sessionStorage.getItem('saruhub-flash');
+      sessionStorage.removeItem('saruhub-flash');
+      return m;
+    } catch (e) { return null; }
+  }
+
+  // ---- 表示 ------------------------------------------------------------
+  function render() {
+    grid.textContent = '';
+    items.forEach(function (it) {
+      var fig = document.createElement('figure');
+      fig.className = 'tile';
+
+      var open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'open';
+      open.setAttribute('aria-label', (it.name || '画像') + ' を大きく表示');
+      var img = document.createElement('img');
+      img.alt = it.name || 'サルの画像';
+      img.loading = 'lazy';
+      if (it.w && it.h) { img.width = it.w; img.height = it.h; }
+      img.src = it.src;
+      open.appendChild(img);
+      open.addEventListener('click', function () { showViewer(items.indexOf(it)); });
+      fig.appendChild(open);
+
+      if (editor) {
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'del';
+        del.textContent = '×';
+        del.setAttribute('aria-label', (it.name || '画像') + ' を消す');
+        var timer = 0;
+        del.addEventListener('click', function () {
+          if (busy) return;
+          if (!timer) {
+            del.classList.add('armed');
+            del.textContent = '消す？';
+            timer = setTimeout(function () { timer = 0; del.classList.remove('armed'); del.textContent = '×'; }, 3000);
+            return;
+          }
+          clearTimeout(timer);
+          commit(items.filter(function (x) { return x !== it; }), '1枚消しました。');
+        });
+        fig.appendChild(del);
+      }
+      grid.appendChild(fig);
+    });
+
+    countEl.textContent = items.length;
+    zone.hidden = !editor;
+    zone.dataset.empty = items.length ? 'false' : 'true';
+    emptyEl.hidden = editor || items.length > 0;
+    btnClear.hidden = !editor || items.length === 0;
+    noteEl.hidden = !editor;
+    if (editor) {
+      var mb = (byteLen(buildDoc(items)) / 1048576).toFixed(1);
+      noteEl.textContent = 'アップロードした画像は、このページを共有した相手にも表示されます。画像を追加・削除できるのは、あなたと、編集を許可した人だけです。使用中の容量：' + mb + ' / 15 MB';
+    }
+  }
+
+  // ---- 公開（ページ自身を新しい内容で保存しなおす） --------------------
+  function becomeReadOnly() {
+    editor = false;
+    render();
+    localBar.hidden = true;
+    toast('このページは見るだけの状態です。画像を追加・削除できるのは、持ち主と編集を許可された人だけです。');
+  }
+
+  function publishWithRetry(html) {
+    return artifact.publish(html).catch(function (err) {
+      var code = err && err.code;
+      var known = ['conflict', 'not_writer', 'not_declared', 'too_large', 'invalid_content', 'read_only_path',
+        'rate_limited', 'consent_required', 'not_granted', 'capability_disabled', 'capability_removed', 'transform_error'];
+      if (known.indexOf(code) > -1) throw err;
+      // 一時的な失敗は、少し待って1回だけやり直す
+      return new Promise(function (res) { setTimeout(res, 600 + Math.random() * 900); })
+        .then(function () { return artifact.publish(html); });
+    });
+  }
+
+  // next: 公開したい画像の並び。成功すると true。
+  function commit(next, okMsg) {
+    if (!artifact || !editor) return Promise.resolve(false);
+    var html = buildDoc(next);
+    if (byteLen(html) > LIMIT) {
+      setBusy(false);
+      toast('容量がいっぱいです（上限15MB）。画像をいくつか消してから、もう一度アップロードしてください。');
+      return Promise.resolve(false);
+    }
+    setBusy(true, '公開しています。そのままお待ちください。');
+    flash(okMsg);
+    return publishWithRetry(html).then(function () {
+      // ふつうはここでページが新しい版に読み込み直される
+      items = next;
+      setBusy(false);
+      render();
+      toast(okMsg);
+      setTimeout(takeFlash, 4000);
+      return true;
+    }, function (err) {
+      takeFlash();
+      setBusy(false);
+      var code = err && err.code;
+      if (code === 'conflict') {
+        toast('ほかの画面で先に更新されたため、今回の変更は反映されませんでした。最新の状態を読み込みます。');
+      } else if (code === 'too_large') {
+        toast('容量がいっぱいです。画像をいくつか消してから、もう一度アップロードしてください。');
+      } else if (code === 'rate_limited') {
+        toast('短い時間に何度も公開したため、受け付けられませんでした。少し待ってからもう一度お試しください。');
+      } else if (['not_writer', 'not_granted', 'not_declared', 'consent_required', 'capability_disabled', 'capability_removed'].indexOf(code) > -1) {
+        becomeReadOnly();
+      } else {
+        toast('公開できませんでした。少し待ってからもう一度お試しください。');
+      }
+      render();
+      return false;
+    });
+  }
+
+  // ---- 画像を準備する（縮めて、ページに入れられる形にする） ------------
+  function loadImage(url) {
+    return new Promise(function (ok, ng) {
+      var im = new Image();
+      im.onload = function () { ok(im); };
+      im.onerror = function () { ng(new Error('load')); };
+      im.src = url;
+    });
+  }
+  function readDataURL(blob) {
+    return new Promise(function (ok, ng) {
+      var r = new FileReader();
+      r.onload = function () { ok(String(r.result)); };
+      r.onerror = function () { ng(new Error('read')); };
+      r.readAsDataURL(blob);
+    });
+  }
+  function toItem(blob, name) {
+    var url = URL.createObjectURL(blob);
+    var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    return loadImage(url).then(function (im) {
+      var w = im.naturalWidth, h = im.naturalHeight;
+      if (!w || !h) throw new Error('size');
+      if (blob.type === 'image/gif' && blob.size <= GIF_KEEP) {
+        return readDataURL(blob).then(function (src) { return { id: id, name: name, w: w, h: h, src: src }; });
+      }
+      var k = Math.min(1, MAX_EDGE / Math.max(w, h));
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(w * k));
+      c.height = Math.max(1, Math.round(h * k));
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(im, 0, 0, c.width, c.height);
+      var src = c.toDataURL('image/webp', 0.82);
+      if (src.indexOf('data:image/webp') !== 0) src = c.toDataURL('image/jpeg', 0.82);
+      return { id: id, name: name, w: c.width, h: c.height, src: src };
+    }).then(function (it) { URL.revokeObjectURL(url); return it; },
+            function (e) { URL.revokeObjectURL(url); throw e; });
+  }
+
+  // entries: [{blob, name}]。準備できた画像と、入らなかった数を返す
+  function prepare(entries) {
+    var out = [], failed = 0, noRoom = 0;
+    var used = byteLen(buildDoc(items));
+    var chain = Promise.resolve();
+    entries.forEach(function (en) {
+      chain = chain.then(function () {
+        if (noRoom) { noRoom++; return; }
+        return toItem(en.blob, en.name).then(function (it) {
+          var cost = it.src.length + 200;
+          if (used + cost > LIMIT) { noRoom++; return; }
+          used += cost;
+          out.push(it);
+        }, function () { failed++; });
+      });
+    });
+    return chain.then(function () { return { items: out, failed: failed, noRoom: noRoom }; });
+  }
+
+  function addFiles(fileList) {
+    if (!editor || busy) return;
+    var imgs = Array.prototype.filter.call(fileList || [], function (f) { return /^image\//.test(f.type); });
+    if (!imgs.length) {
+      toast('画像ファイルが見つかりませんでした。JPEG・PNG・GIFなどの画像を選んでください。');
+      return;
+    }
+    setBusy(true, imgs.length + '枚の画像を準備しています。');
+    prepare(imgs.map(function (f) { return { blob: f, name: f.name || '貼り付けた画像' }; })).then(function (r) {
+      var extra = '';
+      if (r.failed) extra += r.failed + '枚は読み込めませんでした。';
+      if (r.noRoom) extra += r.noRoom + '枚は容量が足りず入りませんでした。';
+      if (!r.items.length) { setBusy(false); toast('アップロードできませんでした。' + extra); return; }
+      return commit(r.items.concat(items), r.items.length + '枚アップロードしました。' + extra);
+    });
+  }
+
+  $('btnPick').addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () { addFiles(fileInput.files); fileInput.value = ''; });
+
+  document.addEventListener('paste', function (e) {
+    if (!editor) return;
+    var files = e.clipboardData && e.clipboardData.files;
+    if (files && files.length) { e.preventDefault(); addFiles(files); }
+  });
+  function hasFiles(e) {
+    var t = e.dataTransfer && e.dataTransfer.types;
+    return !!t && Array.prototype.indexOf.call(t, 'Files') > -1;
+  }
+  document.addEventListener('dragover', function (e) {
+    if (!editor || !hasFiles(e)) return;
+    e.preventDefault();
+    document.body.classList.add('dragging');
+  });
+  document.addEventListener('dragleave', function (e) {
+    if (!e.relatedTarget) document.body.classList.remove('dragging');
+  });
+  document.addEventListener('drop', function (e) {
+    if (!editor || !hasFiles(e)) return;
+    e.preventDefault();
+    document.body.classList.remove('dragging');
+    addFiles(e.dataTransfer.files);
+  });
+
+  var armTimer = 0;
+  function disarm() {
+    clearTimeout(armTimer); armTimer = 0;
+    btnClear.classList.remove('armed');
+    btnClear.textContent = '全部消す';
+  }
+  btnClear.addEventListener('click', function () {
+    if (busy) return;
+    if (!armTimer) {
+      btnClear.classList.add('armed');
+      btnClear.textContent = 'もう一度押すと全部消えます';
+      armTimer = setTimeout(disarm, 3500);
+      return;
+    }
+    disarm();
+    commit([], '全部消しました。');
+  });
+
+  // ---- 前の版でこのブラウザにだけ保存していた画像を引きつぐ ------------
+  var localDB = null, localRecs = [];
+  function openLocal() {
+    return new Promise(function (res) {
+      try {
+        var q = indexedDB.open('saruhub-gallery', 1);
+        q.onupgradeneeded = function () { q.result.createObjectStore('imgs', { keyPath: 'id', autoIncrement: true }); };
+        q.onsuccess = function () {
+          localDB = q.result;
+          try {
+            var g = localDB.transaction('imgs').objectStore('imgs').getAll();
+            g.onsuccess = function () { res(g.result || []); };
+            g.onerror = function () { res([]); };
+          } catch (e) { res([]); }
+        };
+        q.onerror = function () { res([]); };
+      } catch (e) { res([]); }
+    });
+  }
+  function clearLocal() {
+    try { localDB.transaction('imgs', 'readwrite').objectStore('imgs').clear(); } catch (e) {}
+  }
+  function checkLocal() {
+    openLocal().then(function (recs) {
+      var pending = false;
+      try { pending = sessionStorage.getItem('saruhub-clear-local') === '1'; sessionStorage.removeItem('saruhub-clear-local'); } catch (e) {}
+      if (pending) { clearLocal(); return; }
+      localRecs = recs.filter(function (r) { return r && r.blob; }).sort(function (a, b) { return b.id - a.id; });
+      if (!localRecs.length || !editor) return;
+      localText.textContent = '前にこのブラウザへ保存した画像が' + localRecs.length + '枚あります。ほかの人には、まだ見えていません。';
+      localBar.hidden = false;
+    });
+  }
+  btnLocal.addEventListener('click', function () {
+    if (busy || !localRecs.length) return;
+    setBusy(true, localRecs.length + '枚の画像を準備しています。');
+    prepare(localRecs.map(function (r) { return { blob: r.blob, name: r.name || 'サルの画像' }; })).then(function (r) {
+      if (!r.items.length) { setBusy(false); toast('画像を準備できませんでした。'); return; }
+      var extra = r.noRoom ? r.noRoom + '枚は容量が足りず入りませんでした。' : '';
+      try { sessionStorage.setItem('saruhub-clear-local', '1'); } catch (e) {}
+      return commit(r.items.concat(items), r.items.length + '枚を公開しました。' + extra).then(function (ok) {
+        if (ok) { clearLocal(); localBar.hidden = true; }
+        try { sessionStorage.removeItem('saruhub-clear-local'); } catch (e) {}
+      });
+    });
+  });
+
+  // ---- 大きく見る ------------------------------------------------------
+  var viewer = $('viewer'), viewerImg = $('viewerImg'), viewerName = $('viewerName');
+  var cur = 0;
+  function showViewer(i) {
+    if (!items.length) return;
+    cur = (i + items.length) % items.length;
+    viewerImg.src = items[cur].src;
+    viewerImg.alt = items[cur].name || 'サルの画像';
+    viewerName.textContent = (cur + 1) + ' / ' + items.length + '　' + (items[cur].name || '');
+    if (!viewer.open) { try { viewer.showModal(); } catch (e) { viewer.setAttribute('open', ''); } }
+  }
+  $('btnPrev').addEventListener('click', function () { showViewer(cur - 1); });
+  $('btnNext').addEventListener('click', function () { showViewer(cur + 1); });
+  $('btnClose').addEventListener('click', function () { viewer.close(); });
+  viewer.addEventListener('click', function (e) { if (e.target === viewer) viewer.close(); });
+  viewer.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') showViewer(cur - 1);
+    if (e.key === 'ArrowRight') showViewer(cur + 1);
+  });
+
+  // ---- 起動：まず全員に画像を見せ、編集できる人にだけアップロード口を出す ----
+  render();
+  var first = takeFlash();
+  if (first) toast(first);
+
+  var claude = window.claude;
+  if (claude && typeof claude.use === 'function') {
+    Promise.all([claude.use('artifact'), claude.use('user')]).then(function (ns) {
+      artifact = ns[0];
+      if (!artifact) return false;
+      // 編集できるかどうかを先に確かめる。わからないときは出しておき、断られたら見るだけにする
+      return ns[1] ? ns[1].canEdit() : true;
+    }).then(function (can) {
+      editor = !!can;
+      if (editor) { render(); checkLocal(); }
+    }).catch(function () {});
+  }
+})();
+</script>
+
+</body></html>
